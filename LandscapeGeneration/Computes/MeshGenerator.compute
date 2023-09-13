@@ -1,0 +1,38 @@
+#pragma kernel GenerateTile
+
+RWTexture2D<float> HeightMap;
+RWStructuredBuffer<float3> Vertices;
+RWStructuredBuffer<int> Triangles;
+RWStructuredBuffer<float2> UVs;
+
+uint Resolution;
+float Scale;
+float Strength;
+uint HeightMapResolution;
+
+[numthreads(2,2,1)]
+void GenerateTile (uint3 id : SV_DispatchThreadID)
+{
+    uint vertexId = id.x + id.y * (Resolution + 1);
+    float center = (Resolution + 1) / 2;
+    uint pixelStep = HeightMapResolution / (Resolution + 1);
+
+    Vertices[vertexId] = float3((id.x - center)  * Scale / Resolution, HeightMap[id.xy * pixelStep].x * Strength, (id.y - center) * Scale / Resolution);
+    UVs[vertexId] = float2((id.x - center) / Resolution + 0.5f, (id.y - center) / Resolution + 0.5f);
+
+    int shift = id.y;
+    uint shiftBound = Resolution - id.y;
+    if(id.x >= shiftBound && id.y != Resolution)
+        shift = id.y + 1;
+
+    uint triangleId = vertexId * 6;
+
+    Triangles[triangleId + 0] = vertexId + 0 + shift;
+    Triangles[triangleId + 1] = vertexId + Resolution + 1 + shift;
+    Triangles[triangleId + 2] = vertexId + 1 + shift;
+
+    Triangles[triangleId + 3] = vertexId + 1 + shift;
+    Triangles[triangleId + 4] = vertexId + Resolution + 1 + shift;
+    Triangles[triangleId + 5] = vertexId + Resolution + 2 + shift;
+}
+
